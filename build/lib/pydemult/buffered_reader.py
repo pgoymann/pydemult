@@ -7,7 +7,6 @@ def buffered_blob(handle, bufsize):
 
     while True:
         blob = handle.read(bufsize)
-        
         if blob == b'':
             # Could be end of files
             yield backlog
@@ -17,7 +16,7 @@ def buffered_blob(handle, bufsize):
             blob = backlog + blob
 
         i = blob.rfind(b'\n@', 0)
-        #print(i)
+
         # Make sure no quality line was found
         if (blob[i-1] == CHAR_PLUS) and (blob[i-2] == CHAR_NEWLINE):
             i = blob.rfind(b'\n@', 0, i-2)

@@ -6,6 +6,7 @@ from functools import reduce
 
 def entryfunc(blob):
     entries = blob.split(b'\n')
+    # (header, sequence, quality)
     return(zip(entries[::4], entries[1::4], entries[3::4]))
 
 def _demult_chunk(chunk, mutationhash, regex, write_unmatched, q, keep_empty = False):
@@ -18,12 +19,10 @@ def _demult_chunk(chunk, mutationhash, regex, write_unmatched, q, keep_empty = F
 
         is_unmatched = False
         match = regex.match(entry[0].decode('utf-8'))
-        match =  True
+
         if match is not None:
             try:
                 bc_match = match.group('CB')
-                print(entry)
-                break
                 origin = mutationhash[bc_match]
 
                 if len(origin) > 1:
@@ -47,7 +46,6 @@ def _demult_chunk(chunk, mutationhash, regex, write_unmatched, q, keep_empty = F
         fastq = reduce(lambda x, y: x + '{}\n{}\n+\n{}\n'.format(y[0].decode('utf-8'), y[1].decode('utf-8'), y[2].decode('utf-8')), bc_chunks[barcode], '')
         q[barcode].put((barcode, fastq))
     writing = time.time()
-    
     return((len(chunk), parsing-start, writing-parsing))
 
 def _writer(q, barcodes, prefix = '', suffix = '.fastq.gz'):

@@ -11,9 +11,9 @@ import pandas as pd
 from mputil import lazy_map
 from functools import partial
 
-from mutationhash import mutationhash
-from buffered_reader import buffered_blob
-from worker import _demult_chunk, _writer
+from .mutationhash import mutationhash
+from .buffered_reader import buffered_blob
+from .worker import _demult_chunk, _writer
 
 # https://stackoverflow.com/a/43922107/6198494
 def chunker_list(seq, size):
@@ -78,8 +78,6 @@ def demultiplex():
     #
     # Create mutationhash in case of barcode whitelist
     #
-    
-    print(args.samplesheet,  args.column_separator,  args.sample_column)
     samplesheet = pd.read_csv(args.samplesheet, sep = args.column_separator, index_col = args.sample_column)
     barcode_dict = samplesheet[args.barcode_column].to_dict()
     barcodes = list(barcode_dict.values())
@@ -123,9 +121,3 @@ def demultiplex():
 
     writer_pool.close()
     writer_pool.join()
-
-def main():
-    demultiplex()
-
-if __name__ == '__main__':
-    main()
