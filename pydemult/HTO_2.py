@@ -24,9 +24,10 @@ from solo import hashsolo
 import anndata as ad
 
 #self imports 
-from .buffered_reader import buffered_blob
-from .mutationhash import mutationhash
-from .worker import entryfunc
+from buffered_reader import buffered_blob
+
+from mutationhash import mutationhash
+from worker import entryfunc
 
 
 def barcode_merger(accumulator, element):
@@ -74,8 +75,8 @@ def find_best_match_shift(TAG_seq, tags, maximum_distance):
                 return(best_match)
     return(best_match)
 
-def _find_bc(queue, chunk, mutationhash, regex,  keep_empty = False):
-    barcodes_result_dict  = defaultdict(set)
+def _find_bc(chunk,barcodes_result_dict, mutationhash, regex,  keep_empty = False):
+
     count = 0
     line = 0
     for entry in entryfunc(chunk):
@@ -95,11 +96,12 @@ def _find_bc(queue, chunk, mutationhash, regex,  keep_empty = False):
                     barcode = list(origin)[0]
                     count += 1
 
-                    barcodes_result_dict[barcode].add(line)
+                    t = barcodes_result_dict[barcode]
+                    t.append(line)
+                    barcodes_result_dict[barcode] = t
             except KeyError:
                     is_unmatched = True
-        
-    queue.put(barcodes_result_dict)
+
     
 def _find_hto(queue,chunk, mutationhash, regex, keep_empty = False):
     hto_result_dict  = {}
@@ -137,7 +139,7 @@ def count():
     parser.add_argument('--barcode-edit-distance', help='Maximum allowed edit distance for barcodes', metavar = '1', type=int, default = 1)
     parser.add_argument('--hashtag-edit-distance', help='Maximum allowed edit distance for hash tag oligos', metavar = '2', type=int, default = 1)
     parser.add_argument('--edit-alphabet', help='The alphabet that is used to created edited barcodes / hash tag sequences', choices=['N', 'ACGT', 'ACGTN'], default = "ACGTN", type = str, metavar = "ACGTN")
-    parser.add_argument('--buffer-size', help="Buffer size for the FASTQ reader (in Bytes). Must be large enough to contain the largest entry.", type = int, default = 100000018, metavar = '100000018')
+    parser.add_argument('--buffer-size', help="Buffer size for the FASTQ reader (in Bytes). Must be large enough to contain the largest entry.", type = int, default = 100000018, metavar = '100000018')#100000018
     parser.add_argument('--threads', '-t', help='Number of threads to use for multiprocessing.', type=int, metavar='1', default=1)
     parser.add_argument('--barcode-sequences', '-i', help='FASTQ file containing barcode sequences', metavar='input_BC.fastq.gz', type=str)
     parser.add_argument('--hashtag-sequences', '-j', help='FASTQ file containing hash tag sequences', metavar='input_HT.fastq.gz', type=str)
@@ -186,7 +188,9 @@ def count():
     logger.info('Creating mutationhash for barcodes from whitelist')
     with open(args.whitelist, 'r') as file:
         barcodes = [line.rstrip('\n') for line in file]
-    barcodes_dict = {}
+    manager = multiprocessing.Manager()
+    barcodes_dict = manager.dict()
+    
     for i in barcodes:
         barcodes_dict[i] = []
     logger.debug('Whitelist contains the following barcodes: ' + ','.join(barcodes))
@@ -196,6 +200,7 @@ def count():
     barcode_mutationhash = mutationhash(strings = barcodes, nedit = args.barcode_edit_distance, 
                                             alphabet = list(args.edit_alphabet), log = logger)
 
+    
     #
     # Construct a list of barcode indices from barcode reads
     #
@@ -204,7 +209,7 @@ def count():
     logger.info('Start reading barcodes file.')
     
     zcat = subprocess.Popen(['zcat', args.barcode_sequences], stdout=subprocess.PIPE, bufsize = bufsize)
-    queue = multiprocessing.Queue()#Que vor result from multiprocesses
+
     barcode_results = []#storting results from que
     with zcat.stdout as fh:
         blob_generator = buffered_blob(fh, bufsize)#genert blob by bufsize
@@ -212,22 +217,21 @@ def count():
         procs = []
         for index in blob_generator:
             procs_counter +=1
-            proc = multiprocessing.Process(target=_find_bc, args=(queue,index, barcode_mutationhash, c_barcode_regex))
+            proc = multiprocessing.Process(target=_find_bc, args=(index,barcodes_dict, barcode_mutationhash, c_barcode_regex))
             procs.append(proc)
             proc.start()
             if procs_counter == args.threads:
-                for i in procs:
-                    barcode_results.append( queue.get())
+
                 for i in procs:
                     i.join()
                 procs = []
                 procs_counter = 0
 
-    for i in procs:
-        barcode_results.append( queue.get())
+
 
     for i in procs:
         i.join()#wait until Process have finished
+
     logger.info('Finish reading barcodes')
 
     #
@@ -237,8 +241,7 @@ def count():
     hashes = []
     hashes_names = []
     hash_frame = pd.read_csv(args.reference)
-    hashes_names = hash_frame['name'].to_list()
-    print(hashes_names)
+    hashes_names = hash_frame['id'].to_list()
     hashes_names.append('unmaped')#count all reads which didn't contain a hash sequence
     hashes = hash_frame['sequence'].to_list()
 
@@ -290,7 +293,7 @@ def count():
         hto_data = {**hto_data, **i}
 
     #merging barcodes data
-    barcode_data = reduce(barcode_merger, barcode_results, {})
+    barcode_data = barcodes_dict#reduce(barcode_merger, barcode_results, {})
     
     logger.info('Finished merging results')
 
