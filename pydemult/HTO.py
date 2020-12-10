@@ -37,12 +37,6 @@ def barcode_merger(accumulator, element):
 
 #assigend hashes to cells 
 
-def hash_solo(adata):
-    print(adata)
-    cell_hashing_data = ad.read('/mnt/workspace/pgoyman/SC_analysis/test_pydemult/test_data/test_data/out/adata_sub_hash.h5ad')
-    #hashsolo.hashsolo(cell_hashing_data)
-    #return cell_hashing_data.obs
-
 #demultiplexing functions
 
 def find_best_match_shift(TAG_seq, tags, maximum_distance):
@@ -330,8 +324,7 @@ def count():
         mtx_matrix.append(count_result)
 
 
-    print(hashes)
-    print(hashes_names)
+
     logging.info('Assign hahes to Cells')
     mat_coo = sparse.coo_matrix((np.array(mtx_matrix).astype(np.float)))
     scipy.io.mmwrite(args.out + 'matrix.mtx', mat_coo)
@@ -342,14 +335,15 @@ def count():
     var_data_farme = pd.DataFrame(index=hashes_names)
     obs_data_farme.to_csv(args.out + 'barcode.csv')
     var_data_farme.to_csv(args.out + 'feature.csv')
-    print(hashes_names)
+
     adata = ad.AnnData(sparse.csr_matrix(mat_coo),  var=var_data_farme , obs=obs_data_farme, dtype='int32')
     adata.write(filename=args.out + 'adata.h5ad', compression='gzip')
     hashs = adata.var.index[adata.var.index.str.contains('HashTag*')].tolist()
     adata_subset = adata[:, hashs]
     adata_subset.write(filename=args.out + 'adata_sub_hash.h5ad',as_dense='X')
-    print(args.out + 'adata_sub_hash.h5ad')
-    hash_solo(args.out + 'adata_sub_hash.h5ad')
+
+    logging.info('Finished wirte out' + args.out + 'adata_sub_hash.h5ad')
+
  
 def main():
     count()
