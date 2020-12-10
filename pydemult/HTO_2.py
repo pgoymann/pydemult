@@ -72,7 +72,7 @@ def find_best_match_shift(TAG_seq, tags, maximum_distance):
             elif score <= best_score:
                 best_score = score
                 best_match = name
-                return(best_match)
+                return (best_match)
     return(best_match)
 
 def _find_bc(chunk,barcodes_result_dict, mutationhash, regex,  keep_empty = False):
@@ -103,7 +103,7 @@ def _find_bc(chunk,barcodes_result_dict, mutationhash, regex,  keep_empty = Fals
                     is_unmatched = True
 
     
-def _find_hto(queue,chunk, mutationhash, regex, keep_empty = False):
+def _find_hto(queue,chunk, mutationhash, regex, dict_hashes, inv_dict_hash, sliding_window_hemming_distance, sliding_window = False,keep_empty = False):
     hto_result_dict  = {}
     count = 0
     line = 0
@@ -114,6 +114,7 @@ def _find_hto(queue,chunk, mutationhash, regex, keep_empty = False):
             continue
         is_unmatched = False
         match = regex.match(entry[1].decode('utf-8'))
+
         if match is not None:
             try:
                 bc_match = match.group()
@@ -125,7 +126,19 @@ def _find_hto(queue,chunk, mutationhash, regex, keep_empty = False):
                     hto_result_dict[line] = hto_hash
                     count += 1
             except KeyError:
-                is_unmatched = True
+                if sliding_window:
+                    
+                    bc_match = find_best_match_shift(entry[1].decode('utf-8'), inv_dict_hash, sliding_window_hemming_distance)
+                    if  bc_match != 'unmapped':
+                        origin = mutationhash[dict_hashes[bc_match]]
+                        if len(origin) > 1:
+                            is_unmatched = True
+                        else:
+                            hto_hash = list(origin)[0]  
+                            hto_result_dict[line] = hto_hash
+                            count += 1
+                else:
+                    is_unmatched = True
     queue.put(hto_result_dict)
     
 
@@ -145,6 +158,8 @@ def count():
     parser.add_argument('--hashtag-sequences', '-j', help='FASTQ file containing hash tag sequences', metavar='input_HT.fastq.gz', type=str)
     parser.add_argument('-v', '--version', action='version', version='%(prog)s 0.1')
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--sliding-window-hemming-distance', help='Maximum allowed edit distance for hash tag oligos', metavar = '2', type=int, default = 2)
+    parser.add_argument('--sliding-window', action='store_true')
     parser.add_argument('--silent', '-s', action='store_true')
 
     args = parser.parse_args()
@@ -173,7 +188,7 @@ def count():
 
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
-    elif os.path.isfile(outdir ):
+    elif os.path.isfile(outdir):
         sys.exit('Their is already a folder ' + outdir)
 
     #
@@ -231,7 +246,7 @@ def count():
 
     for i in procs:
         i.join()#wait until Process have finished
-
+    
     logger.info('Finish reading barcodes')
 
     #
@@ -240,10 +255,15 @@ def count():
     logger.info('Reading hastags reference file')
     hashes = []
     hashes_names = []
+    #read_hatag file
     hash_frame = pd.read_csv(args.reference)
-    hashes_names = hash_frame['id'].to_list()
-    hashes_names.append('unmaped')#count all reads which didn't contain a hash sequence
+    hashes_names = hash_frame['name'].to_list()
     hashes = hash_frame['sequence'].to_list()
+    hash_dict = {key:val for key,val in zip(hashes_names,hashes) }
+    inv_dict_hash = {v: k for k, v in hash_dict.items()}
+
+    hashes_names.append('unmaped')#count all reads which didn't contain a hash sequence
+   
 
     
 
@@ -266,8 +286,11 @@ def count():
         procs_counter = 0
         procs = []
         for index in blob_generator:
+            
+            #_find_hto(queue,index, hashtag_mutationhash, c_hashtag_regex)
             procs_counter +=1
-            proc = multiprocessing.Process(target=_find_hto, args=(queue,index, hashtag_mutationhash, c_hashtag_regex))
+            proc = multiprocessing.Process(target=_find_hto, args=(queue,index, hashtag_mutationhash, 
+                    c_hashtag_regex, hash_dict,inv_dict_hash, args.sliding_window_hemming_distance, args.sliding_window))
             procs.append(proc)
             proc.start()
             if procs_counter == args.threads:
@@ -282,7 +305,7 @@ def count():
         hto_results.append( queue.get())
     #wait for porcesses
     for i in procs:
-        i.join()#wait until Process have finished
+        i.join()#wait until Process have finished"""
     logger.info('Finished reading hashtag file')
 
     logger.info('Strat merging results')
