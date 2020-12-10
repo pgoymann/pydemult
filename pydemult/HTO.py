@@ -46,19 +46,6 @@ def hash_solo(adata):
 #demultiplexing functions
 
 def find_best_match_shift(TAG_seq, tags, maximum_distance):
-    """
-    Find the best match from the list of tags with sliding window.
-    Compares the Levenshtein distance between tags and the trimmed sequences.
-    The tag and the sequence must have the same length.
-    If no matches found returns 'unmapped'.
-    We add 1
-    Args:
-        TAG_seq (string): Sequence from R1 already start trimmed
-        tags (dict): A dictionary with the TAGs as keys and TAG Names as values.
-        maximum_distance (int): Maximum distance given by the user.
-    Returns:
-        best_match (string): The TAG name that will be used for counting.
-    """
     best_match = 'unmapped'
     best_score = maximum_distance
     shifts = range(0,len(TAG_seq) - len(max(tags,key=len)))
@@ -184,7 +171,8 @@ def count():
 
     bufsize = args.buffer_size
     outdir = args.out
-
+    if outdir[-1] != '/':
+        outdir += '/'
 
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
@@ -211,10 +199,8 @@ def count():
     logger.debug('Whitelist contains the following barcodes: ' + ','.join(barcodes))
     logger.info('Creating mutation hash with edit distance {} for {} barcodes.'.format(args.barcode_edit_distance, len(barcodes)))
     
-
     barcode_mutationhash = mutationhash(strings = barcodes, nedit = args.barcode_edit_distance, 
                                             alphabet = list(args.edit_alphabet), log = logger)
-
     
     #
     # Construct a list of barcode indices from barcode reads
@@ -242,8 +228,6 @@ def count():
                 procs = []
                 procs_counter = 0
 
-
-
     for i in procs:
         i.join()#wait until Process have finished
     
@@ -263,16 +247,11 @@ def count():
     inv_dict_hash = {v: k for k, v in hash_dict.items()}
 
     hashes_names.append('unmaped')#count all reads which didn't contain a hash sequence
-   
-
-    
 
     logger.debug('Whitelist contains the following : ' + ','.join(hashes))
     logger.info('Creating mutation hash with edit distance {} for {} barcodes.'.format(args.hashtag_edit_distance, len(hashes)))
     hashtag_mutationhash = mutationhash(strings = hashes, nedit = args.hashtag_edit_distance,
                                              alphabet = list(args.edit_alphabet), log = logger)
-
-
     #
     # Construct a list of hto indices from cDNA reads
     #
@@ -348,7 +327,6 @@ def count():
             hash_result_for_barcode.append(hashes_names[count_result.index(max(count_result))])
         else:
             hash_result_for_barcode.append(hashes_names[heapq.nlargest(2, range(len(count_result)), key=count_result.__getitem__)[1]] + '_unmaped')
-
         mtx_matrix.append(count_result)
 
 
