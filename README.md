@@ -49,6 +49,39 @@ By default, `pydemult` parses the read name for the cell barcode with regular ex
 
 `pydemult` divides its work into a demultiplexing and output part. The main thread streams the input and lazily distributes data blobs (of size `--buffer-size`) across `n` different demultiplexing threads (set with `--threads`), where the actual work happens. Demultiplexed input is then sent over to `m` threads for writing into individual output files (set with `--writer-threads`). Reading and demultiplexing are fast and CPU-bound operations, while output speed is determined by how fast data can be written to the underlying file system. In our experience, output is much slower than demultiplexing itself and requires proportionally more cores to speed up the runtime. We obtained best results when distributing output to three threads for each demultiplexing thread (`1:3` ratio of `--threads` to `--writer-threads`).  
 
+# HTO detection
+
+HTOCount is able to demultiplex hash SC experiments and counts hashes per cell.
+
+# Installation
+
+```
+conda create --name pydemult  python=3.8
+conda activate pydemult
+python setup.py install
+```
+## Quick start
+
+```HTOcount --reference Hash_tag.csv --whitelist barcodes.tsv --threads {cores} --barcode-sequences BC.fastq.gz --hashtag-sequences cDNA.fastq.gz ```
+
+## Functions
+
+- ```--reference```  Reference file with hashtag sequences
+- ```--whitelist``` Whitelist which contains cell barcodes
+
+- ```--barcode-sequences```  Fastqfile with barcodes
+- ```--barcode-regex```  regex where HTOCount searches for barcode default first 16 bp 
+- ```--barcode-edit-distance``` Number of allowed Mutations in barcode
+
+- ```--hashtag-sequences``` Fastqfile with hashes
+- ```--hashtag-regex```  regex where HTOCount searches for hash default between bp 10 and 15
+- ```--hashtag-edit-distance``` Number of allowed Mutations in hash
+- ```--sliding-window``` Boolean searches for hash in hole read for best match
+- ```--sliding-window-hemming-distance``` Number of allowed Mutations in hash
+
+- ```--buffer-size```
+- ```--threads```
+
 ## License
 
 The project is licensed under the MIT license. See the `LICENSE` file for details.
