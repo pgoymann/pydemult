@@ -20,14 +20,12 @@ import json
 import numpy as np
 import os
 import Levenshtein
-from solo import hashsolo
 import anndata as ad
 
 #self imports 
-from buffered_reader import buffered_blob
-
-from mutationhash import mutationhash
-from worker import entryfunc
+from .buffered_reader import buffered_blob
+from .mutationhash import mutationhash
+from .worker import entryfunc
 
 
 def barcode_merger(accumulator, element):
@@ -140,7 +138,7 @@ def count():
     parser.add_argument('-v', '--version', action='version', version='%(prog)s 0.1')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--sliding-window-hemming-distance', help='Maximum allowed edit distance for hash tag oligos', metavar = '2', type=int, default = 2)
-    parser.add_argument('--sliding-window', action='store_true')
+    parser.add_argument('--sliding-window', action='store_true', help='Enables sliding over cDNA sequenz by serching for hahs.')
     parser.add_argument('--silent', '-s', action='store_true')
 
     args = parser.parse_args()

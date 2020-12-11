@@ -5,15 +5,11 @@ README.md
 setup.py
 dist/pydemult-0.6-py3.6.egg
 pydemult/HTO.py
-pydemult/HTO_2.py
 pydemult/__init__.py
 pydemult/buffered_reader.py
-pydemult/features.csv
 pydemult/mutationhash.py
 pydemult/pydemult.py
 pydemult/pydemult.yml
-pydemult/test.py
-pydemult/tmp.txt
 pydemult/worker.py
 pydemult.egg-info/PKG-INFO
 pydemult.egg-info/SOURCES.txt

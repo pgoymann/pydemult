@@ -1,2 +1,7 @@
+wheel
+regex
 pandas
 mputil
+scvi-tools
+anndata
+python-Levenshtein

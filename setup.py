@@ -18,9 +18,15 @@ setup(name='pydemult',
                             'HTOcount = pydemult.HTO:count']
       },
       scripts = [],
+      setup_requires=["numpy","Cython"],
       install_requires=[
+        'wheel',
+        'regex',
         'pandas',
-        'mputil'
+        'mputil',
+        'scvi-tools',
+        'anndata',
+        'python-Levenshtein'
       ],
       classifiers = [
         'License :: OSI Approved :: MIT License',
